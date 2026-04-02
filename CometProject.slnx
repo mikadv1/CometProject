@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="CometProject.vcxproj" Id="71e20088-7a67-4627-a2d7-aa43deed9e0c" />
+</Solution>
