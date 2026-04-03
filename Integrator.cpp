@@ -2,52 +2,109 @@
 #include <cmath>
 #include <cstdio>
 
-StateVector rk4Step(double t, const StateVector& state, double dt, DerivFunc derivs) {
-    StateVector k1 = derivs(t, state);
+Trajectory::Trajectory() : t(nullptr), state(nullptr), nPoints(0), dt(0), t0(0), tend(0) {}
 
-    StateVector temp1 = state + k1 * (dt / 2.0);
-    StateVector k2 = derivs(t + dt / 2.0, temp1);
-
-    StateVector temp2 = state + k2 * (dt / 2.0);
-    StateVector k3 = derivs(t + dt / 2.0, temp2);
-
-    StateVector temp3 = state + k3 * dt;
-    StateVector k4 = derivs(t + dt, temp3);
-
-    return state + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (dt / 6.0);
+Trajectory::~Trajectory() {
+	clear();
 }
 
-void integrate(double t0, double tend, double dt, StateVector& state, DerivFunc derivs, const char* outputFile) {
-    FILE* file = nullptr;
-    if (outputFile != nullptr) {
-        file = fopen(outputFile, "w");
-        if (file != nullptr) {
-            // Заголовок CSV
-            fprintf(file, "JD,X,Y,Z,VX,VY,VZ\n");
-        }
-    }
+void Trajectory::allocate(int n, double start_t, double step) {
+	clear();
+	nPoints = n;
+	dt = step;
+	t0 = start_t;
+	tend = start_t + (n - 1) * step;
 
+	t = new double[nPoints];
+	state = new StateVector[nPoints];
+
+	for (int i = 0; i < nPoints; i++) {
+		t[i] = t0 + i * dt;
+	}
+}
+
+void Trajectory::clear() {
+	if (t) delete[] t;
+	if (state) delete[] state;
+	t = nullptr;
+	state = nullptr;
+	nPoints = 0;
+	dt = 0;
+	t0 = 0;
+	tend = 0;
+}
+
+void integrate(
+    double t0,
+    double tend,
+    double grid_dt,      // шаг выходной сетки
+    double internal_dt,  // внутренний шаг РК4
+    const StateVector& state0,
+    DerivFunc derivs,
+    Trajectory& traj
+) {
+    // Вычисляем количество точек на выходной сетке
+    int nPoints = static_cast<int>((tend - t0) / grid_dt) + 1;
+
+    // Выделяем память под траекторию
+    traj.allocate(nPoints, t0, grid_dt);
+
+    // Начальное состояние
+    StateVector state = state0;
     double t = t0;
-    //double step = fmin(t0 - t, dt);
+    int gridIdx = 0;
+
+    // Записываем начальную точку
+    traj.state[0] = state0;
+
+    // Интегрирование
     while (t < tend) {
-        // Запись в файл
-        if (file != nullptr) {
-            fprintf(file, "%.16le,%.16le,%.16le,%.16le,%.16le,%.16le,%.16le\n",
-                t, state.r.x, state.r.y, state.r.z,
-                state.v.x, state.v.y, state.v.z);
+        // Определяем шаг: min(internal_dt, next_grid_t - t)
+        double next_grid_t = t0 + (gridIdx + 1) * grid_dt;
+        double step = (next_grid_t - t < internal_dt) ? (next_grid_t - t) : internal_dt;
+
+        // Шаг РК4
+        state = rk4Step(t, state, step, derivs);
+        t += step;
+
+        // Если достигли следующей точки выходной сетки — записываем
+        if (gridIdx + 1 < nPoints && t >= traj.t[gridIdx + 1] - 1e-12) {
+            gridIdx++;
+            traj.state[gridIdx] = state;
         }
+    }
+}
 
-        //step = fmin(t0 - t, dt);
-        state = rk4Step(t, state, dt, derivs);
-        t += dt;
+StateVector interpolateLinear(const Trajectory& traj, double t) {
+    // Проверка границ
+    if (t <= traj.t[0] || t >= traj.t[traj.nPoints - 1]) {
+        printf("Time %.16le is out of bounds of trajectory", t);
+        return StateVector();
     }
 
-    // Запись последней точки
-    if (file != nullptr) {
-        double r = state.r.norm();
-        fprintf(file, "%.16le,%.16le,%.16le,%.16le,%.16le,%.16le,%.16le\n",
-            t, state.r.x, state.r.y, state.r.z,
-            state.v.x, state.v.y, state.v.z);
-        fclose(file);
-    }
+
+    int left = (t - traj.t0) / traj.dt;
+    int right = left + 1;
+
+    // Коэффициент интерполяции
+    double alpha = (t - traj.t[left]) / (traj.t[right] - traj.t[left]);
+
+    // Линейная интерполяция позиции и скорости
+    return StateVector(
+        traj.state[left].r + (traj.state[right].r - traj.state[left].r) * alpha,
+        traj.state[left].v + (traj.state[right].v - traj.state[left].v) * alpha
+    );
+}
+
+bool isTimeInRange(const Trajectory& traj, double t) {
+    return (t >= traj.t[0] && t <= traj.t[traj.nPoints - 1]);
+}
+
+static StateVector rk4Step(double t, const StateVector& state, double dt, DerivFunc derivs) {
+    StateVector k1 = derivs(t, state);
+    StateVector k2 = derivs(t + dt / 2.0, state + k1 * (dt / 2.0));
+    StateVector k3 = derivs(t + dt / 2.0, state + k2 * (dt / 2.0));
+    StateVector k4 = derivs(t + dt, state + k3 * dt);
+
+    return state + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (dt / 6.0);
 }
