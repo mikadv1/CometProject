@@ -1,5 +1,12 @@
 #pragma once
 
+const double PI = 3.14159265358979323846;
+const double AU_KM = 149597870.7;
+const double DAY_SEC = 86400.0;
+const double C_LIGHT = 299792458.0;
+const double C_LIGHT_AU_DAY = 173.14463267424034;
+const double ARCSEC_PER_RAD = 206264.806247;
+
 // Параметры Солнца
 const double J2_SUN = 2.21e-7;
 const double R_SUN = 695700.0 / 149597870.7;    // 0.00465047 а.е.

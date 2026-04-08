@@ -1,8 +1,10 @@
 ﻿#include <cstdio>
 #include <windows.h>
+#include "Constants.h"
 #include "Types.h"
 #include "Integrator.h"
 #include "CometModel.h"
+#include "Reduction.h"
 
 int main() {
     SetConsoleOutputCP(65001);
@@ -23,33 +25,30 @@ int main() {
     double internal_dt = 1.0e-2;  // шаг интегрирования 
     double tend = t0 + 300.0; 
 
-    // 3. Интегрирование
     Trajectory traj;
     integrate(t0, tend, grid_dt, internal_dt, state0, cometDerivatives, traj);
 
-    printf("Integration is done. Points: %d\n", traj.nPoints);
+    Vector3 r_station(174.768, -4926.470, 4033.989);
+    ReductionResult result;
 
-    // 4. Тест интерполяции: запрос положения в произвольный момент
-    double query_t = 2460876.5;  // произвольное время
-    if (isTimeInRange(traj, query_t)) {
-        StateVector interpolated = interpolateLinear(traj, query_t);
-        printf("Interpolated at JD %.8f:\n", query_t);
-        printf("  Position: (%.16le, %.16le, %.16le) AU\n",
-            interpolated.r.x, interpolated.r.y, interpolated.r.z);
-    }
+    reduceObservation(
+        2460858.728550,
+        976840.200 / ARCSEC_PER_RAD,
+        -67259.500 / ARCSEC_PER_RAD,
+        r_station,
+        traj,
+        result
+    );
 
-    // 5. (Опционально) Вывод траектории в файл — теперь это делает main, а не integrator
-    FILE* f = fopen("data\\orbit_output.csv", "w");
-    if (f) {
-        fprintf(f, "JD,X,Y,Z,VX,VY,VZ\n");
-        for (int i = 0; i < traj.nPoints; i++) {
-            fprintf(f, "%.8f,%.16le,%.16le,%.16le,%.16le,%.16le,%.16le\n",
-                traj.t[i],
-                traj.state[i].r.x, traj.state[i].r.y, traj.state[i].r.z,
-                traj.state[i].v.x, traj.state[i].v.y, traj.state[i].v.z);
-        }
-        fclose(f);
-    }
+    printf("JD UT:  %.8f d\n", result.jd_utc);
+    printf("JD TDB: %.8f d\n", result.jd_tdb);
+    printf("dRA:  %.3f arcsec\n", result.dRA * ARCSEC_PER_RAD);
+    printf("dDec: %.3f arcsec\n", result.dDec * ARCSEC_PER_RAD);
+    printf("RA obs:    %.3f arcsec\n", result.ra_obs * ARCSEC_PER_RAD);
+    printf("RA model:  %.3f arcsec\n", result.ra_model * ARCSEC_PER_RAD);
+    printf("Dec obs:   %.3f arcsec\n", result.dec_obs * ARCSEC_PER_RAD);
+    printf("Dec model: %.3f arcsec\n", result.dec_model * ARCSEC_PER_RAD);
+
 
     // 6. Очистка
     traj.clear();

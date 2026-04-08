@@ -23,8 +23,8 @@ StateVector cometDerivatives(double t, const StateVector& state) {
 
     // 3. Возмущения от планет  
     for (int i = 0; i < NUM_OBJECTS; i++) {
-        Vector3 r_planet = getPlanetPosition(OBJECTS[i].code, t);
-        Vector3 r_rel = state.r - r_planet;
+        StateVector body_state = getBodyState(OBJECTS[i].code, t);
+        Vector3 r_rel = state.r - body_state.r;
         double d = r_rel.norm();
 
         double a_perturb = -OBJECTS[i].gm / (d * d * d);
