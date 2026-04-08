@@ -8,7 +8,7 @@ int main() {
     SetConsoleOutputCP(65001);
 
     // 1. Инициализация модели
-    if (!initCometModel("C:\\diploma\\ephs\\epm2021.bsp")) {
+    if (!initCometModel("C:\\diploma\\data\\epm2021.bsp")) {
         printf("[ERROR] Failed to initialize comet model!\n");
         return 1;
     }
@@ -39,7 +39,7 @@ int main() {
     }
 
     // 5. (Опционально) Вывод траектории в файл — теперь это делает main, а не integrator
-    FILE* f = fopen("orbit_output.csv", "w");
+    FILE* f = fopen("data\\orbit_output.csv", "w");
     if (f) {
         fprintf(f, "JD,X,Y,Z,VX,VY,VZ\n");
         for (int i = 0; i < traj.nPoints; i++) {

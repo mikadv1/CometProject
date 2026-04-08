@@ -133,19 +133,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CometModel.cpp" />
-    <ClCompile Include="EphemerisWrapper.cpp" />
-    <ClCompile Include="Integrator.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Types.cpp" />
+    <ClInclude Include="include\CometModel.h" />
+    <ClInclude Include="include\Constants.h" />
+    <ClInclude Include="include\ephaccess.h" />
+    <ClInclude Include="include\EphemerisWrapper.h" />
+    <ClInclude Include="include\Integrator.h" />
+    <ClInclude Include="include\Types.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CometModel.h" />
-    <ClInclude Include="Constants.h" />
-    <ClInclude Include="EphemerisWrapper.h" />
-    <ClInclude Include="include\ephaccess.h" />
-    <ClInclude Include="Integrator.h" />
-    <ClInclude Include="Types.h" />
+    <ClCompile Include="src\CometModel.cpp" />
+    <ClCompile Include="src\EphemerisWrapper.cpp" />
+    <ClCompile Include="src\Integrator.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Types.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
