@@ -1,59 +1,39 @@
 ﻿#include <cstdio>
+#include <cstring>
+#include <cmath>
 #include <windows.h>
-#include "Constants.h"
 #include "Types.h"
 #include "Integrator.h"
 #include "CometModel.h"
-#include "Reduction.h"
+#include "FileIO.h"
+
 
 int main() {
     SetConsoleOutputCP(65001);
 
-    // 1. Инициализация модели
-    if (!initCometModel("C:\\diploma\\data\\epm2021.bsp")) {
-        printf("[ERROR] Failed to initialize comet model!\n");
-        return 1;
-    }
+    if (!initCometModel("C:\\diploma\\data\\epm2021.bsp")) return 1;
 
-    // 2. Начальные условия (из JPL Horizons)
+    // Состояние в момент времени t0
     StateVector state0;
-    state0.r = { 2.704338288122531E-01, -4.501623714812790E+00, 2.893195749808039E-01 };  // а.е.
-    state0.v = { -1.384389231863844E-02, 3.253008104441191E-02, -1.470083979858731E-03 };  // а.е./день
+    state0.r = { 1.057725183264539E+00, -5.962453673239701E+00, -2.179617339224094E+00 };
+    state0.v = { -1.377811929112319E-02, 2.988753120767556E-02, 1.139417199619259E-02 };
 
-    double t0 = 2460857.5;  // JD
-    double grid_dt = 1.0e-1;
-    double internal_dt = 1.0e-2;  // шаг интегрирования 
-    double tend = t0 + 300.0; 
+    setNGParameters(5.320206165314E-8, 1.148166060448E-8, -6.854491829872E-9);
 
+    double t0 = 2460800.5, tend = t0 + 350.0, grid_dt = 0.125, internal_dt = 0.0125;
+
+    // Интегрирование
     Trajectory traj;
     integrate(t0, tend, grid_dt, internal_dt, state0, cometDerivatives, traj);
 
-    Vector3 r_station(174.768, -4926.470, 4033.989);
-    ReductionResult result;
-
-    reduceObservation(
-        2460858.728550,
-        976840.200 / ARCSEC_PER_RAD,
-        -67259.500 / ARCSEC_PER_RAD,
-        r_station,
-        traj,
-        result
+    // Обработка наблюдений
+    processObservations(
+        "C:\\diploma\\data\\obs.csv",
+        "C:\\diploma\\data\\residuals.csv",
+        traj
     );
 
-    printf("JD UT:  %.8f d\n", result.jd_utc);
-    printf("JD TDB: %.8f d\n", result.jd_tdb);
-    printf("dRA:  %.3f arcsec\n", result.dRA * ARCSEC_PER_RAD);
-    printf("dDec: %.3f arcsec\n", result.dDec * ARCSEC_PER_RAD);
-    printf("RA obs:    %.3f arcsec\n", result.ra_obs * ARCSEC_PER_RAD);
-    printf("RA model:  %.3f arcsec\n", result.ra_model * ARCSEC_PER_RAD);
-    printf("Dec obs:   %.3f arcsec\n", result.dec_obs * ARCSEC_PER_RAD);
-    printf("Dec model: %.3f arcsec\n", result.dec_model * ARCSEC_PER_RAD);
-
-
-    // 6. Очистка
     traj.clear();
-
     cleanupCometModel();
-
     return 0;
 }

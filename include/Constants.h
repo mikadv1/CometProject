@@ -9,25 +9,25 @@ const double ARCSEC_PER_RAD = 206264.806247;
 
 // Параметры Солнца
 const double J2_SUN = 2.21e-7;
-const double R_SUN = 695700.0 / 149597870.7;    // 0.00465047 а.е.
-const double GM_SUN = 295912208288.32e-15;      // 2.9591220828832e-4
+const double R_SUN = 695700.0 / 149597870.7;    
+const double GM_SUN = 295912208288.32e-15;      
 const double SUN_POLE_X = 0.12235349;
 const double SUN_POLE_Y = -0.42307208;
 const double SUN_POLE_Z = 0.8977971;
 
-// Физические константы (EPM2021, ИПА РАН)
+// GM тел Солнечной системы (EPM2021, ИПА РАН)
 // Единицы: а.е.^3/день^2
 
-const double GM_MERCURY = 49124.8045e-15;       // 4.91248045e-11
-const double GM_VENUS = 724345.2333e-15;        // 7.243452333e-10
-const double GM_EARTH = 888769.2464e-15;        // 8.887692464e-10
-const double GM_MOON = 10931.894556e-15;        // 1.0931894556e-11
-const double GM_MARS = 95495.4870e-15;          // 9.54954870e-11
-const double GM_JUPITER = 282534582.5972e-15;   // 2.825345825972e-7
-const double GM_SATURN = 84597060.7325e-15;     // 8.45970607325e-8
-const double GM_URANUS = 12920265.7963e-15;     // 1.29202657963e-8
-const double GM_NEPTUNE = 15243573.4789e-15;    // 1.52435734789e-8
-const double GM_PLUTO = 2175.0991e-15;          // 2.1750991e-12
+const double GM_MERCURY = 49124.8045e-15;       
+const double GM_VENUS = 724345.2333e-15;        
+const double GM_EARTH = 888769.2464e-15;        
+const double GM_MOON = 10931.894556e-15;        
+const double GM_MARS = 95495.4870e-15;          
+const double GM_JUPITER = 282534582.5972e-15;   
+const double GM_SATURN = 84597060.7325e-15;     
+const double GM_URANUS = 12920265.7963e-15;     
+const double GM_NEPTUNE = 15243573.4789e-15;    
+const double GM_PLUTO = 2175.0991e-15;          
 const double GM_CERES = 139.64409e-15;
 const double GM_PALLAS = 30.8296e-15;
 const double GM_VESTA = 38.5475e-15;
@@ -41,7 +41,7 @@ struct ObjectInfo {
     const char* name;
 };
 
-// Массив всех планет для итерации
+// Массив ввозмущающих тел
 const ObjectInfo OBJECTS[] = {
     { 1,       GM_MERCURY,  "Mercury"  },
     { 2,       GM_VENUS,    "Venus"    },

@@ -3,6 +3,7 @@
 #include "Constants.h"
 #include "ephaccess.h"
 #include <cmath>
+#include <cstdio>
 
 extern "C" {
 #include "sofa.h"
@@ -21,13 +22,11 @@ double utc2tdb(double jd_utc) {
     return tdb1 + tdb2;
 }
 
-Vector3 stationITRS2GCRS(double jd_utc, const Vector3& r_itrs) {
+Vector3 stationITRS2GCRS(double jd_utc, double jd_tt, const Vector3& r_itrs) {
     double xp = 0.0;
     double yp = 0.0;
     double c2t[3][3];
     double r_in[3], r_out[3];
-
-    double jd_tt = jd_utc + (37.0 + 32.184) / DAY_SEC;
 
     iauC2t06a(jd_tt, 0.0, jd_utc, 0.0, xp, yp, c2t);
 
@@ -47,7 +46,7 @@ double solveLightTime(
 ) {
     double delta = 0.0;
 
-    for (int iter = 0; iter < 10; iter++) {
+    for (int iter = 0; iter < 20; iter++) {
         double jd_emit = jd_obs_tdb - delta;
 
         StateVector comet = interpolateLinear(traj, jd_emit);
@@ -59,12 +58,11 @@ double solveLightTime(
         }
 
         delta = new_delta;
-    }
-
+    }    
     return delta;
 }
 
-Vector3 applyGravDeflection(const Vector3& rho, const Vector3& r_obs) {
+Vector3 Deflection(const Vector3& rho, const Vector3& r_obs) {
     double p[3], q[3], e[3], pout[3];
 
     double rho_norm = rho.norm();
@@ -93,27 +91,6 @@ Vector3 applyGravDeflection(const Vector3& rho, const Vector3& r_obs) {
     return Vector3(pout[0] * rho_norm, pout[1] * rho_norm, pout[2] * rho_norm);
 }
 
-Vector3 applyAberration(const Vector3& rho, const Vector3& v_earth) {
-    double p[3], v[3], pab[3];
-    double v_au_day = v_earth.norm();
-
-    p[0] = rho.x / rho.norm();
-    p[1] = rho.y / rho.norm();
-    p[2] = rho.z / rho.norm();
-
-    v[0] = v_earth.x / v_au_day;
-    v[1] = v_earth.y / v_au_day;
-    v[2] = v_earth.z / v_au_day;
-
-    double s = 1.0;
-    double bm1 = sqrt(1.0 - 1.0 / (C_LIGHT_AU_DAY * C_LIGHT_AU_DAY));
-
-    iauAb(p, v, s, bm1, pab);
-
-    double factor = rho.norm();
-    return Vector3(pab[0] * factor, pab[1] * factor, pab[2] * factor);
-}
-
 void cartesianToSpherical(const Vector3& r, double& ra, double& dec) {
     double p[3], theta, phi;
 
@@ -123,27 +100,22 @@ void cartesianToSpherical(const Vector3& r, double& ra, double& dec) {
 
     iauC2s(p, &theta, &phi);
 
-    ra = theta;
-    dec = phi;
+    ra = theta * ARCSEC_PER_RAD;
+    dec = phi * ARCSEC_PER_RAD;
 }
 
 void reduceObservation(
-    double jd_utc,
-    double ra_obs,
-    double dec_obs,
-    const Vector3& r_station_itrs,
+    const Observation& obs,
     const Trajectory& traj,
     ReductionResult& result
 ) {
-    result.jd_utc = jd_utc;
-    result.ra_obs = ra_obs;
-    result.dec_obs = dec_obs;
+    result.jd_utc = obs.jd_utc;
 
-    double jd_tdb = utc2tdb(jd_utc);
+    double jd_tdb = utc2tdb(obs.jd_utc);
     result.jd_tdb = jd_tdb;
 
-    Vector3 r_station_gcrs = stationITRS2GCRS(jd_utc, r_station_itrs);
-    r_station_gcrs = r_station_gcrs * (1.0 / AU_KM);
+    Vector3 r_station_gcrs = stationITRS2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrs);
+    r_station_gcrs = r_station_gcrs / AU_KM;
 
     StateVector earth_state = getBodyState(EPH_EARTH, jd_tdb);
 
@@ -156,21 +128,16 @@ void reduceObservation(
 
     Vector3 rho = comet.r - r_obs;
 
-    //rho = applyGravDeflection(rho, r_obs);
-
-    rho = applyAberration(rho, earth_state.v);
+    rho = Deflection(rho, r_obs);
 
     double ra_model, dec_model;
     cartesianToSpherical(rho, ra_model, dec_model);
 
-    result.ra_model = ra_model;
-    result.dec_model = dec_model;
+    double dRA = obs.ra - ra_model;
+    while (dRA > PI * ARCSEC_PER_RAD) dRA -= PI * 2 * ARCSEC_PER_RAD;
+    while (dRA < -PI * ARCSEC_PER_RAD) dRA += PI * 2 * ARCSEC_PER_RAD;
 
-    double dRA = ra_model - ra_obs;
-    while (dRA > PI) dRA -= PI * 2;
-    while (dRA < -PI) dRA += PI * 2;
-
-    double dDec = dec_model - dec_obs;
+    double dDec = obs.dec - dec_model;
 
     result.dRA = dRA;
     result.dDec = dDec;

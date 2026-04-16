@@ -5,20 +5,20 @@
 struct ReductionResult {
     double jd_utc;
     double jd_tdb;
-    double ra_obs;
-    double dec_obs;
-    double ra_model;
-    double dec_model;
     double dRA;
     double dDec;
-    int obsCode;
+};
+
+struct Observation {
+    double jd_utc;
+    double ra;
+    double dec;
+    Vector3& r_station_itrs;
+    char type;
 };
 
 void reduceObservation(
-    double jd_utc,
-    double ra_obs,
-    double dec_obs,
-    const Vector3& r_station_itrs,
+    const Observation& obs,
     const Trajectory& traj,
     ReductionResult& result
 );
@@ -33,8 +33,6 @@ double solveLightTime(
     const Trajectory& traj
 );
 
-Vector3 applyGravDeflection(const Vector3& rho, const Vector3& r_obs, const Vector3& r_comet);
-
-Vector3 applyAberration(const Vector3& rho, const Vector3& v_earth);
+Vector3 Deflection(const Vector3& rho, const Vector3& r_obs);
 
 void cartesianToSpherical(const Vector3& r, double& ra, double& dec);

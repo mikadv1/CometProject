@@ -38,6 +38,9 @@
     <ClInclude Include="include\Reduction.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="include\FileIO.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\CometModel.cpp">
@@ -797,6 +800,9 @@
       <Filter>sofa</Filter>
     </ClCompile>
     <ClCompile Include="src\Reduction.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FileIO.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>

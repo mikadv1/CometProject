@@ -43,10 +43,7 @@ void integrate(
     DerivFunc derivs,
     Trajectory& traj
 ) {
-    // Вычисляем количество точек на выходной сетке
     int nPoints = static_cast<int>((tend - t0) / grid_dt) + 1;
-
-    // Выделяем память под траекторию
     traj.allocate(nPoints, t0, grid_dt);
 
     // Начальное состояние
@@ -81,7 +78,6 @@ StateVector interpolateLinear(const Trajectory& traj, double t) {
         printf("Time %.16le is out of bounds of trajectory", t);
         return StateVector();
     }
-
 
     int left = (t - traj.t0) / traj.dt;
     int right = left + 1;
