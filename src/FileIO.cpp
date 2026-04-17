@@ -22,8 +22,7 @@ bool loadTrajectoryFromCSV(const char* filename, Trajectory& traj, double t0, do
         if (sscanf(line, "%lf,%*[^,],%lf,%lf,%lf,%lf,%lf,%lf",
             &jd, &x, &y, &z, &vx, &vy, &vz) != 7) {
             printf("[WARN] Parse error at line %d\n", count + 2);
-            printf(line);
-            count++;
+            printf("%s", line);
             continue;
         }
         traj.t[count] = jd;

@@ -91,7 +91,7 @@ Vector3 Deflection(const Vector3& rho, const Vector3& r_obs) {
     return Vector3(pout[0] * rho_norm, pout[1] * rho_norm, pout[2] * rho_norm);
 }
 
-void cartesianToSpherical(const Vector3& r, double& ra, double& dec) {
+void cartesianToSphericalArcsec(const Vector3& r, double& ra, double& dec) {
     double p[3], theta, phi;
 
     p[0] = r.x;
@@ -131,7 +131,7 @@ void reduceObservation(
     rho = Deflection(rho, r_obs);
 
     double ra_model, dec_model;
-    cartesianToSpherical(rho, ra_model, dec_model);
+    cartesianToSphericalArcsec(rho, ra_model, dec_model);
 
     double dRA = obs.ra - ra_model;
     while (dRA > PI * ARCSEC_PER_RAD) dRA -= PI * 2 * ARCSEC_PER_RAD;

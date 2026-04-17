@@ -59,7 +59,7 @@ StateVector cometDerivatives(double t, const StateVector& state) {
 
     // 2. Учет квадрупольного момента Солнца
     Vector3 p(SUN_POLE_X, SUN_POLE_Y, SUN_POLE_Z);
-    Vector3 r_hat = state.r / r;
+    Vector3 r_hat = r_rel / r;
     double r_dot_p = r_hat * p;
     double coeff = 3.0 * J2_SUN * GM_SUN * R_SUN * R_SUN / (r * r * r * r);
     Vector3 a_obl = (r_hat * (2.5 * r_dot_p * r_dot_p - 0.5) - p * r_dot_p) * coeff;
@@ -76,7 +76,7 @@ StateVector cometDerivatives(double t, const StateVector& state) {
     }
 
     // 4. Негравитационные эффекты 
-    Vector3 a_ng = computeNGAcceleration(state);
+    Vector3 a_ng = computeNGAcceleration(state - sun);
     result.v = result.v + a_ng;
 
     return result;

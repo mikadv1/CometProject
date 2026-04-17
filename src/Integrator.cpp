@@ -76,7 +76,7 @@ StateVector interpolateLinear(const Trajectory& traj, double t) {
     // Проверка границ
     if (t <= traj.t[0] || t >= traj.t[traj.nPoints - 1]) {
         printf("Time %.16le is out of bounds of trajectory", t);
-        return StateVector();
+        return;
     }
 
     int left = (t - traj.t0) / traj.dt;
