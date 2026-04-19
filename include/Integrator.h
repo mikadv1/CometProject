@@ -20,7 +20,7 @@ struct Trajectory {
 };
 
 // Тип функции для правой части ОДУ
-using DerivFunc = StateVector(*)(double t, const StateVector& state);
+using DerivFunc = StateVector(*)(double t, const StateVector& state, const NGVector&);
 
 // Заполняет траекторию на сетке [t0, tend] с шагом grid_dt
 // internal_dt - внутренний шаг интегрирования
@@ -30,6 +30,7 @@ void integrate(
     double grid_dt,      
     double internal_dt,  
     const StateVector& state0,
+    const NGVector& ng,
     DerivFunc derivs,
     Trajectory& traj
 );
@@ -41,4 +42,4 @@ bool isTimeInRange(const Trajectory& traj, double t);
 
 // Шаг метода Рунге-Кутты 4 порядка
 template<typename StateType>
-static StateType rk4Step(double t, const StateType& state, double dt, StateType(*derivs)(double, const StateType&));
+static StateType rk4Step(double t, const StateType& state, double dt, const NGVector& ng, StateType(*derivs)(double, const StateType&, const NGVector&));

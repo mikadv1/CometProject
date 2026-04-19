@@ -22,3 +22,7 @@ struct StateVector {
     StateVector operator-(const StateVector& other) const;
     StateVector operator*(double scalar) const;
 };
+
+struct NGVector {
+    double A1, A2, A3;
+};

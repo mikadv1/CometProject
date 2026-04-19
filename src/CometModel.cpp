@@ -3,11 +3,6 @@
 #include "Constants.h"
 #include <cmath>
 
-// Параметры модели Марсдена
-double A1_NG = 0.0;  // радиальная компонента (а.е./день²)
-double A2_NG = 0.0;  // поперечная компонента
-double A3_NG = 0.0;  // нормальная компонента
-
 // Параметры функции активности для водяного льда
 const double NG_R0 = 2.808;
 const double NG_M = 2.15;
@@ -27,26 +22,21 @@ double marsden_g(double r_au) {
 }
 
 // Вычисление негравитационного ускорения в барицентрической системе
-Vector3 computeNGAcceleration(const StateVector& state) {
+Vector3 computeNGAcceleration(const StateVector& state, double A1, double A2, double A3) {
     double r = state.r.norm();
 
-    // Единичные векторы орбитальной системы (RTN)
     Vector3 e_R = state.r / r;
-
     Vector3 h_vec = state.r.cross(state.v);
     double h = h_vec.norm();
+
     Vector3 e_N = h_vec / h;
-
     Vector3 e_T = e_N.cross(e_R);
-
-    // Значение функции активности
     double g_val = marsden_g(r);
 
-    // Суммарное ускорение
-    return (e_R * A1_NG + e_T * A2_NG + e_N * A3_NG) * g_val;
+    return (e_R * A1 + e_T * A2 + e_N * A3) * g_val;
 }
 
-StateVector cometDerivatives(double t, const StateVector& state) {
+StateVector cometDerivatives(double t, const StateVector& state, const NGVector& ng) {
     StateVector result;
     result.r = state.v;
 
@@ -76,7 +66,7 @@ StateVector cometDerivatives(double t, const StateVector& state) {
     }
 
     // 4. Негравитационные эффекты 
-    Vector3 a_ng = computeNGAcceleration(state - sun);
+    Vector3 a_ng = computeNGAcceleration(state - sun, ng.A1, ng.A2, ng.A3);
     result.v = result.v + a_ng;
 
     return result;
@@ -91,17 +81,4 @@ bool initCometModel(const char* ephFile) {
 
 void cleanupCometModel() {
     cleanupEphemeris();
-}
-
-// Функции для установки параметров извне
-void setNGParameters(double a1, double a2, double a3) {
-    A1_NG = a1;
-    A2_NG = a2;
-    A3_NG = a3;
-}
-
-void getNGParameters(double& a1, double& a2, double& a3) {
-    a1 = A1_NG;
-    a2 = A2_NG;
-    a3 = A3_NG;
 }
