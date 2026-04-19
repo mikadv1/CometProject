@@ -76,10 +76,10 @@ StateVector interpolateLinear(const Trajectory& traj, double t) {
     // Проверка границ
     if (t <= traj.t[0] || t >= traj.t[traj.nPoints - 1]) {
         printf("Time %.16le is out of bounds of trajectory", t);
-        return;
+        return StateVector();
     }
 
-    int left = (t - traj.t0) / traj.dt;
+    int left = (int)(t - traj.t0) / traj.dt;
     int right = left + 1;
 
     // Коэффициент интерполяции
@@ -96,11 +96,12 @@ bool isTimeInRange(const Trajectory& traj, double t) {
     return (t >= traj.t[0] && t <= traj.t[traj.nPoints - 1]);
 }
 
-static StateVector rk4Step(double t, const StateVector& state, double dt, DerivFunc derivs) {
-    StateVector k1 = derivs(t, state);
-    StateVector k2 = derivs(t + dt / 2.0, state + k1 * (dt / 2.0));
-    StateVector k3 = derivs(t + dt / 2.0, state + k2 * (dt / 2.0));
-    StateVector k4 = derivs(t + dt, state + k3 * dt);
+template<typename StateType>
+static StateType rk4Step(double t, const StateType& state, double dt, StateType(*derivs)(double, const StateType&)) {
+    StateType k1 = derivs(t, state);
+    StateType k2 = derivs(t + dt / 2.0, state + k1 * (dt / 2.0));
+    StateType k3 = derivs(t + dt / 2.0, state + k2 * (dt / 2.0));
+    StateType k4 = derivs(t + dt, state + k3 * dt);
 
     return state + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (dt / 6.0);
 }

@@ -40,4 +40,5 @@ StateVector interpolateLinear(const Trajectory& traj, double t);
 bool isTimeInRange(const Trajectory& traj, double t);
 
 // Шаг метода Рунге-Кутты 4 порядка
-static StateVector rk4Step(double t, const StateVector& state, double dt, DerivFunc derivs);
+template<typename StateType>
+static StateType rk4Step(double t, const StateType& state, double dt, StateType(*derivs)(double, const StateType&));
