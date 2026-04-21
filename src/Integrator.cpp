@@ -41,7 +41,6 @@ void integrate(
     double internal_dt,  // внутренний шаг РК4
     const StateVector& state0,
     const NGVector& ng,
-    DerivFunc derivs,
     Trajectory& traj
 ) {
     int nPoints = static_cast<int>((tend - t0) / grid_dt) + 1;
@@ -62,7 +61,7 @@ void integrate(
         double step = (next_grid_t - t < internal_dt) ? (next_grid_t - t) : internal_dt;
 
         // Шаг РК4
-        state = rk4Step(t, state, step, ng, derivs);
+        state = rk4Step(t, state, step, ng, cometDerivatives);
         t += step;
 
         // Если достигли следующей точки выходной сетки — записываем
@@ -97,12 +96,3 @@ bool isTimeInRange(const Trajectory& traj, double t) {
     return (t >= traj.t[0] && t <= traj.t[traj.nPoints - 1]);
 }
 
-template<typename StateType>
-static StateType rk4Step(double t, const StateType& state, double dt, const NGVector& ng, StateType(*derivs)(double, const StateType&, const NGVector&)) {
-    StateType k1 = derivs(t, state, ng);
-    StateType k2 = derivs(t + dt / 2.0, state + k1 * (dt / 2.0), ng);
-    StateType k3 = derivs(t + dt / 2.0, state + k2 * (dt / 2.0), ng);
-    StateType k4 = derivs(t + dt, state + k3 * dt, ng);
-
-    return state + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (dt / 6.0);
-}

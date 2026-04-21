@@ -138,6 +138,7 @@
     <ClInclude Include="include\ephaccess.h" />
     <ClInclude Include="include\EphemerisWrapper.h" />
     <ClInclude Include="include\FileIO.h" />
+    <ClInclude Include="include\GaussNewton.h" />
     <ClInclude Include="include\Integrator.h" />
     <ClInclude Include="include\Reduction.h" />
     <ClInclude Include="include\Types.h" />
@@ -393,6 +394,7 @@
     <ClCompile Include="src\CometModel.cpp" />
     <ClCompile Include="src\EphemerisWrapper.cpp" />
     <ClCompile Include="src\FileIO.cpp" />
+    <ClCompile Include="src\GaussNewton.cpp" />
     <ClCompile Include="src\Integrator.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Reduction.cpp" />

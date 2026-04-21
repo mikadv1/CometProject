@@ -1,15 +1,48 @@
 ﻿#include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <clocale>
 #include <windows.h>
 #include "Types.h"
 #include "Integrator.h"
 #include "CometModel.h"
 #include "FileIO.h"
+#include "GaussNewton.h"
 
+void testSolveCholesky() {
+    // 1. Создаём симметричную положительно определённую матрицу A (9x9)
+    Matrix9x9 A{};
+    for (int i = 0; i < 9; i++) {
+        A[i][i] = 10.0 + i; 
+        for (int j = 0; j < 9; j++) {
+            if (i != j) {
+                A[i][j] = 0.5 * (i + j + 1);  
+            }
+        }
+    }
+
+    // 2. Задаём известный вектор решения x_true
+    ParamVector x_true = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
+
+    std::array<bool, 9> selected = { true, true, true, false, false, false, true, true, true };
+
+    ParamVector b_partial{ 113.5, 138., 162.5, 248., 113., 130., 260.5, 285., 309.5 };
+
+    ParamVector x_partial = solveCholesky(A, b_partial, selected);
+
+    printf("\nVector b (A * x_true):\n");
+    for (int i = 0; i < 9; i++) {
+        printf("  b[%d] = %.4f\n", i, b_partial[i]);
+    }
+    printf("\n");
+
+    for (int i = 0; i < 9; i++) {
+        printf("  x[%d] = %.6f (expected: %.6f)\n", i, x_partial[i], x_true[i]);
+    }
+}
 
 int main() {
-    SetConsoleOutputCP(65001);
+    std::setlocale(LC_ALL, "Russian");
 
     if (!initCometModel("C:\\diploma\\data\\epm2021.bsp")) return 1;
 
@@ -22,18 +55,9 @@ int main() {
 
     double t0 = 2460800.5, tend = t0 + 350.0, grid_dt = 0.125, internal_dt = 0.0125;
 
-    // Интегрирование
-    Trajectory traj;
-    integrate(t0, tend, grid_dt, internal_dt, state0, ng0, cometDerivatives, traj);
-
-    // Обработка наблюдений
-    processObservations(
-        "C:\\diploma\\data\\obs.csv",
-        "C:\\diploma\\data\\residuals.csv",
-        traj
-    );
-
-    traj.clear();
+    
+    testSolveCholesky();
+   
     cleanupCometModel();
     return 0;
 }

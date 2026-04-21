@@ -9,6 +9,7 @@ struct Vector3 {
     Vector3 operator-(const Vector3& other) const;
     Vector3 operator*(double scalar) const;
     Vector3 operator/(double scalar) const;
+    double operator[](int index) const;
     double operator*(const Vector3& other) const;
     Vector3 cross(const Vector3& other) const;
     double norm() const;
@@ -25,4 +26,11 @@ struct StateVector {
 
 struct NGVector {
     double A1, A2, A3;
+
+    NGVector();
+    NGVector(double A1, double A2, double A3);
+
+    NGVector operator+(const NGVector& other) const;
+    NGVector operator-(const NGVector& other) const;
+    NGVector operator*(double scalar) const;
 };

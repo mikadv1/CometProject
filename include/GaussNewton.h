@@ -1,0 +1,71 @@
+#pragma once
+#include "Types.h"
+#include "Integrator.h"
+#include "Reduction.h"
+#include <array>
+#include <vector>
+#include <cstdio>
+
+using ParamVector = std::array<double, 9>;
+using Matrix6x9 = std::array<std::array<double, 9>, 6>;
+using Matrix2x9 = std::array<std::array<double, 9>, 2>;
+using Matrix9x9 = std::array<std::array<double, 9>, 9>;
+
+struct OrbitParams {
+    Vector3 r0;
+    Vector3 v0;
+    NGVector ng0;
+
+    OrbitParams();
+    OrbitParams(const Vector3& r, const Vector3& v, const NGVector ng);
+
+    OrbitParams operator+(const OrbitParams& other) const;
+    OrbitParams operator-(const OrbitParams& other) const;
+    OrbitParams operator*(double scalar) const;
+};
+
+struct ExtendedState {
+    StateVector state;
+    Matrix6x9 dxdP;
+
+    ExtendedState();
+    void initIdentity();
+
+    ExtendedState operator+(const ExtendedState& other) const;
+    ExtendedState operator*(double scalar) const;
+};
+
+// Правая часть расширенной системы
+ExtendedState extendedDerivs(double t, const ExtendedState& aug, const NGVector& ng);
+
+using extendedDerivFunc = ExtendedState(*)(double t, const ExtendedState& state, const NGVector&);
+
+// Интегрирование с чувствительностью
+ExtendedState integrateExtended(double t0, double t_end, double internal_dt, const ExtendedState& init, const NGVector& ng);
+
+// Один шаг Гаусса-Ньютона
+OrbitParams gaussNewtonStep(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt);
+
+// Полный цикл подгонки
+OrbitParams fitOrbit(OrbitParams init_params,
+    const std::vector<Observation>& obs,
+    const Trajectory& planet_traj,
+    double internal_dt,
+    double tolerance = 1e-4,
+    int max_iterations = 50);
+
+// Вспомогательные функции
+double computeResidualNorm(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt);
+
+double params_diff(const OrbitParams& p1, const OrbitParams& p2);
+
+void printParams(const OrbitParams& p, int iteration);
+
+ParamVector solveCholesky(const Matrix9x9& A, const ParamVector& b,
+    const std::array<bool, 9>& selected);
