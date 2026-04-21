@@ -82,3 +82,40 @@ bool processObservations(const char* obsFile, const char* outFile, const Traject
     printf("Processed %d observations\n", count);
     return true;
 }
+
+bool loadObservations(const char* obsFile, std::vector<Observation>& obs_vector) {
+    FILE* fin = fopen(obsFile, "r");
+    if (!fin) {
+        printf("[ERROR] Cannot open input file\n");
+        if (fin) fclose(fin);
+        return false;
+    }
+
+    char line[256];
+    fgets(line, sizeof(line), fin);
+
+    int count = 0;
+
+    while (fgets(line, sizeof(line), fin)) {
+        double jd = 0, ra = 0, dec = 0, x = 0, y = 0, z = 0;
+        int code = 0; char type = '\0';
+
+        if (sscanf(line, "%lf,%lf,%lf,%lf,%lf,%lf,%d,%c",
+            &jd, &ra, &dec, &x, &y, &z, &code, &type) != 8) {
+            printf("Error while reading line %d %s\n",count + 2, line);
+            printf("%.6f %.3f %.3f %.3f %.3f %.3f %d %c\n", jd, ra, dec, x, y, z, code, type);
+            continue;
+        }
+        if (type == 'S') continue;
+
+        Vector3 r_station(x, y, z);
+        obs_vector.push_back({ jd, ra, dec, r_station });
+
+        count++;
+    }
+
+    fclose(fin);
+
+    printf("Load %d observations\n", count);
+    return true;
+}

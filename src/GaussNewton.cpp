@@ -189,7 +189,8 @@ Matrix2x9 computeObsJacobian(const ExtendedState& aug, const Vector3& r_observer
 OrbitParams gaussNewtonStep(const OrbitParams& params,
     const std::vector<Observation>& obs,
     const Trajectory& traj,
-    double internal_dt) {
+    double internal_dt, 
+    const std::array<bool, 9> selected) {
 
     int nObs = static_cast<int>(obs.size());
     int nParams = 9;
@@ -198,16 +199,18 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     std::vector<Matrix2x9> J_mats(nObs);
 
     double t0 = traj.t0;
+    double t = traj.t0;
+
+    ExtendedState aug;
+    aug.state.r = params.r0;
+    aug.state.v = params.v0;
+    aug.initIdentity();
 
     for (int i = 0; i < nObs; i++) {
         const Observation& observation = obs[i];
 
-        ExtendedState aug;
-        aug.state.r = params.r0;
-        aug.state.v = params.v0;
-        aug.initIdentity();
-
-        aug = integrateExtended(t0, observation.jd_utc, internal_dt, aug, params.ng0);
+        aug = integrateExtended(t, observation.jd_utc, internal_dt, aug, params.ng0);
+        t = observation.jd_utc;
 
         // Вычислить модельное наблюдение через reduceObservation
         ReductionResult res;
@@ -224,7 +227,10 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
         Vector3 r_observer = earth.r + r_station_gcrs / AU_KM;
 
         J_mats[i] = computeObsJacobian(aug, r_observer);
+        printf("\rObservations processed: %-4d", i + 1);
+        fflush(stdout);
     }
+    printf("\n");
 
     // Формируем нормальные уравнения: (J^T J) * dP = J^T r
     Matrix9x9 JTJ{};
@@ -243,21 +249,19 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     }
 
     // Решаем систему
-    std::array<bool, 9> selected = {1, 1, 1, 1, 1, 1, 0, 0, 0};
-    // Решаем СЛАУ с селекцией параметров
     ParamVector step = solveCholesky(JTJ, JTr, selected);
 
     // Обновляем параметры
     OrbitParams newParams = params;
-    newParams.r0.x -= step[0];
-    newParams.r0.y -= step[1];
-    newParams.r0.z -= step[2];
-    newParams.v0.x -= step[3];
-    newParams.v0.y -= step[4];
-    newParams.v0.z -= step[5];
-    newParams.ng0.A1 -= step[6];
-    newParams.ng0.A2 -= step[7];
-    newParams.ng0.A3 -= step[8];
+    newParams.r0.x += step[0];
+    newParams.r0.y += step[1];
+    newParams.r0.z += step[2];
+    newParams.v0.x += step[3];
+    newParams.v0.y += step[4];
+    newParams.v0.z += step[5];
+    newParams.ng0.A1 += step[6];
+    newParams.ng0.A2 += step[7];
+    newParams.ng0.A3 += step[8];
 
     return newParams;
 }
@@ -268,7 +272,7 @@ double computeResidualNorm(const OrbitParams& params,
     double internal_dt) {
     double sum = 0.0;
 
-    for (const auto& observation : obs) {
+    for (const Observation& observation : obs) {
         ReductionResult res;
         reduceObservation(observation, traj, res);
 
@@ -308,7 +312,7 @@ double params_diff(const OrbitParams& p1, const OrbitParams& p2) {
 }
 
 void printParams(const OrbitParams& p, int iteration) {
-    printf("\n=== Iteration %d Parameters ===\n", iteration);
+    printf("Iteration %d\n", iteration);
     printf("r0 = (%.16le, %.16le, %.16le) AU\n", p.r0.x, p.r0.y, p.r0.z);
     printf("v0 = (%.16le, %.16le, %.16le) AU/day\n", p.v0.x, p.v0.y, p.v0.z);
     printf("NG = (%.16le, %.16le, %.16le) AU/day^2\n", p.ng0.A1, p.ng0.A2, p.ng0.A3);
@@ -392,10 +396,13 @@ ParamVector solveCholesky(const Matrix9x9& A, const ParamVector& b, const std::a
     return x;
 }
 
-OrbitParams fitOrbit(OrbitParams init_params,
+OrbitParams fitOrbit(
+    OrbitParams init_params,
     const std::vector<Observation>& obs,
-    const Trajectory& planet_traj,
+    double t0,
+    double tend,
     double internal_dt,
+    const std::array<bool, 9> selected,
     double tolerance,
     int max_iterations) {
 
@@ -404,20 +411,23 @@ OrbitParams fitOrbit(OrbitParams init_params,
     // Вывод начальных параметров
     printParams(params, 0);
 
-    double initial_rms = computeResidualNorm(params, obs, planet_traj, internal_dt);
-    printf("Initial RMS: %.3f arcsec\n", initial_rms);
+    Trajectory traj;
+    integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
+    double initial_err = computeResidualNorm(params, obs, traj, internal_dt);
+    printf("Initial error: %.16f \n", initial_err);
 
     for (int iter = 0; iter < max_iterations; iter++) {
         OrbitParams prev = params;
-        params = gaussNewtonStep(params, obs, planet_traj, internal_dt);
+        integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
+        params = gaussNewtonStep(params, obs, traj, internal_dt, selected);
 
         // Вывод параметров после итерации
         printParams(params, iter + 1);
 
-        double rms = computeResidualNorm(params, obs, planet_traj, internal_dt);
+        double err = computeResidualNorm(params, obs, traj, internal_dt);
         double delta = params_diff(params, prev);
 
-        printf("RMS = %.3f arcsec, delta = %.3e\n", rms, delta);
+        printf("Error = %.16f , delta = %.e\n", err, delta);
 
         if (delta < tolerance) {
             printf("Converged after %d iterations\n", iter + 1);

@@ -47,14 +47,18 @@ ExtendedState integrateExtended(double t0, double t_end, double internal_dt, con
 OrbitParams gaussNewtonStep(const OrbitParams& params,
     const std::vector<Observation>& obs,
     const Trajectory& traj,
-    double internal_dt);
+    double internal_dt,
+    const std::array<bool, 9> selected);
 
 // Полный цикл подгонки
-OrbitParams fitOrbit(OrbitParams init_params,
+OrbitParams fitOrbit(
+    OrbitParams init_params,
     const std::vector<Observation>& obs,
-    const Trajectory& planet_traj,
+    double t0,
+    double tend,
     double internal_dt,
-    double tolerance = 1e-4,
+    const std::array<bool, 9> selected,
+    double tolerance = 1.0e-8,
     int max_iterations = 50);
 
 // Вспомогательные функции
