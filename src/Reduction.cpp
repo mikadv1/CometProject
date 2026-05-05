@@ -3,7 +3,6 @@
 #include "Constants.h"
 #include "ephaccess.h"
 #include <cmath>
-#include <cstdio>
 
 extern "C" {
 #include "sofa.h"
@@ -22,7 +21,7 @@ double utc2tdb(double jd_utc) {
     return tdb1 + tdb2;
 }
 
-Vector3 stationITRS2GCRS(double jd_utc, double jd_tt, const Vector3& r_itrs) {
+Vector3 stationITRF2GCRS(double jd_utc, double jd_tt, const Vector3& r_itrs) {
     double xp = 0.0;
     double yp = 0.0;
     double c2t[3][3];
@@ -114,7 +113,7 @@ void reduceObservation(
     double jd_tdb = utc2tdb(obs.jd_utc);
     result.jd_tdb = jd_tdb;
 
-    Vector3 r_station_gcrs = stationITRS2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrs);
+    Vector3 r_station_gcrs = stationITRF2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrf);
     r_station_gcrs = r_station_gcrs / AU_KM;
 
     StateVector earth_state = getBodyState(EPH_EARTH, jd_tdb);

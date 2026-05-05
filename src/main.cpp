@@ -1,9 +1,4 @@
-﻿#include <cstdio>
-#include <cmath>
-#include <clocale>
-#include "Types.h"
-#include "Integrator.h"
-#include "CometModel.h"
+﻿#include <clocale>
 #include "FileIO.h"
 #include "GaussNewton.h"
 
@@ -31,8 +26,8 @@ int main() {
     obs_vector.reserve(8500);
     loadObservations("C:\\diploma\\data\\obs.csv", obs_vector);
 
-    std::array<bool, 9> selected = { 1, 1, 1, 1, 1, 1, 0, 0, 0 };
-    OrbitParams estimated = fitOrbit(init_params, obs_vector, t0, tend, dt, selected, 1.0e-10);
+    std::array<bool, 9> selected = { 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    OrbitParams estimated = fitOrbit(init_params, obs_vector, t0, tend, dt, selected, 1.0e-14);
 
     //integrate(t0, tend, dt * 10, dt, { estimated.r0, estimated.v0 }, estimated.ng0, traj);
     //processObservations("C:\\diploma\\data\\obs.csv", "C:\\diploma\\data\\residuals_after.csv", traj);

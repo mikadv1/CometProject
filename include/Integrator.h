@@ -20,9 +20,6 @@ struct Trajectory {
     void clear();
 };
 
-// Тип функции для правой части ОДУ
-//using DerivFunc = StateVector(*)(double t, const StateVector& state, const NGVector&);
-
 // Заполняет траекторию на сетке [t0, tend] с шагом grid_dt
 // internal_dt - внутренний шаг интегрирования
 void integrate(

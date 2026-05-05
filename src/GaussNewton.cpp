@@ -223,7 +223,7 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
         // Якобиан
         StateVector earth = getBodyState(EPH_EARTH, observation.jd_utc);
         double jd_tdb = utc2tdb(observation.jd_utc);
-        Vector3 r_station_gcrs = stationITRS2GCRS(observation.jd_utc, jd_tdb, observation.r_station_itrs);
+        Vector3 r_station_gcrs = stationITRF2GCRS(observation.jd_utc, jd_tdb, observation.r_station_itrf);
         Vector3 r_observer = earth.r + r_station_gcrs / AU_KM;
 
         J_mats[i] = computeObsJacobian(aug, r_observer);
@@ -266,7 +266,7 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     return newParams;
 }
 
-double computeResidualNorm(const OrbitParams& params,
+double computeRMS(const OrbitParams& params,
     const std::vector<Observation>& obs,
     const Trajectory& traj,
     double internal_dt) {
@@ -281,26 +281,26 @@ double computeResidualNorm(const OrbitParams& params,
         sum += dRA * dRA + dDec * dDec;
     }
 
-    return sqrt(sum / static_cast<double>(obs.size()));
+    return sqrt(sum / 2 / static_cast<double>(obs.size()));
 }
 
 double params_diff(const OrbitParams& p1, const OrbitParams& p2) {
     double rel_err[9];
 
     // Позиция
-    rel_err[0] = (p1.r0.x - p2.r0.x) / p1.r0.x;
-    rel_err[1] = (p1.r0.y - p2.r0.y) / p1.r0.y;
-    rel_err[2] = (p1.r0.z - p2.r0.z) / p1.r0.z;
+    rel_err[0] = (p1.r0.x - p2.r0.x);
+    rel_err[1] = (p1.r0.y - p2.r0.y);
+    rel_err[2] = (p1.r0.z - p2.r0.z);
 
     // Скорость
-    rel_err[3] = (p1.v0.x - p2.v0.x) / p1.v0.x;
-    rel_err[4] = (p1.v0.y - p2.v0.y) / p1.v0.y;
-    rel_err[5] = (p1.v0.z - p2.v0.z) / p1.v0.z;
+    rel_err[3] = (p1.v0.x - p2.v0.x);
+    rel_err[4] = (p1.v0.y - p2.v0.y);
+    rel_err[5] = (p1.v0.z - p2.v0.z);
 
     // Параметры Марсдена
-    rel_err[6] = (p1.ng0.A1 - p2.ng0.A1) / p1.ng0.A1;
-    rel_err[7] = (p1.ng0.A2 - p2.ng0.A2) / p1.ng0.A2;
-    rel_err[8] = (p1.ng0.A3 - p2.ng0.A3) / p1.ng0.A3;
+    rel_err[6] = (p1.ng0.A1 - p2.ng0.A1);
+    rel_err[7] = (p1.ng0.A2 - p2.ng0.A2);
+    rel_err[8] = (p1.ng0.A3 - p2.ng0.A3);
 
     // Норма вектора относительных ошибок
     double sum = 0.0;
@@ -413,21 +413,21 @@ OrbitParams fitOrbit(
 
     Trajectory traj;
     integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
-    double initial_err = computeResidualNorm(params, obs, traj, internal_dt);
-    printf("Initial error: %.16f \n", initial_err);
+    double initial_err = computeRMS(params, obs, traj, internal_dt);
+    printf("Initial RMS: %.16f \n", initial_err);
 
     for (int iter = 0; iter < max_iterations; iter++) {
         OrbitParams prev = params;
-        integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
         params = gaussNewtonStep(params, obs, traj, internal_dt, selected);
 
         // Вывод параметров после итерации
         printParams(params, iter + 1);
 
-        double err = computeResidualNorm(params, obs, traj, internal_dt);
+        integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
+        double err = computeRMS(params, obs, traj, internal_dt);
         double delta = params_diff(params, prev);
 
-        printf("Error = %.16f , delta = %.e\n", err, delta);
+        printf("RMS = %.16f , delta = %.e\n", err, delta);
 
         if (delta < tolerance) {
             printf("Converged after %d iterations\n", iter + 1);

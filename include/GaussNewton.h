@@ -2,6 +2,7 @@
 #include "Types.h"
 #include "Integrator.h"
 #include "Reduction.h"
+#include "CometModel.h"
 #include <array>
 #include <vector>
 #include <cstdio>
@@ -58,7 +59,7 @@ OrbitParams fitOrbit(
     double tend,
     double internal_dt,
     const std::array<bool, 9> selected,
-    double tolerance = 1.0e-8,
+    double tolerance = 1.0e-15,
     int max_iterations = 50);
 
 // Вспомогательные функции

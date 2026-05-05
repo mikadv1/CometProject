@@ -13,7 +13,7 @@ struct Observation {
     double jd_utc;
     double ra;
     double dec;
-    Vector3 r_station_itrs;
+    Vector3 r_station_itrf;
     char type;
 };
 
@@ -25,7 +25,7 @@ void reduceObservation(
 
 double utc2tdb(double jd_utc);
 
-Vector3 stationITRS2GCRS(double jd_utc, double jd_tt, const Vector3& r_itrs);
+Vector3 stationITRF2GCRS(double jd_utc, double jd_tt, const Vector3& r_itrf);
 
 double solveLightTime(
     double jd_obs_tdb,
