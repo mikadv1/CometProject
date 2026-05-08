@@ -49,7 +49,8 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     const std::vector<Observation>& obs,
     const Trajectory& traj,
     double internal_dt,
-    const std::array<bool, 9> selected);
+    const std::array<bool, 9> selected,
+    ParamVector& errors);
 
 // Полный цикл подгонки
 OrbitParams fitOrbit(
@@ -63,14 +64,12 @@ OrbitParams fitOrbit(
     int max_iterations = 50);
 
 // Вспомогательные функции
-double computeResidualNorm(const OrbitParams& params,
+double computeRMS(const OrbitParams& params,
     const std::vector<Observation>& obs,
     const Trajectory& traj,
     double internal_dt);
 
-double params_diff(const OrbitParams& p1, const OrbitParams& p2);
-
-void printParams(const OrbitParams& p, int iteration);
+void printParams(const OrbitParams& p, const ParamVector& errors, int iteration);
 
 ParamVector solveCholesky(const Matrix9x9& A, const ParamVector& b,
     const std::array<bool, 9>& selected);
