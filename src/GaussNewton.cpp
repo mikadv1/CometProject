@@ -233,17 +233,20 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     }
     printf("\n");
 
-    // Формируем нормальные уравнения: (J^T J) * dP = J^T r
+    // Формируем нормальные уравнения: (J^T W J) * delta_P = J^T W r
     Matrix9x9 JTJ{};
     ParamVector JTr{};
 
     for (int i = 0; i < nObs; i++) {
+        double w[2] = {};
+        w[0] = 1.0 / (obs[i].sigma_ra * obs[i].sigma_ra);
+        w[1] = 1.0 / (obs[i].sigma_dec * obs[i].sigma_dec);
         for (int row = 0; row < 2; row++) {
             int idx = 2 * i + row;
             for (int col = 0; col < nParams; col++) {
-                JTr[col] += J_mats[i][row][col] * residuals[idx];
+                JTr[col] += J_mats[i][row][col] * residuals[idx] * w[row];
                 for (int col2 = 0; col2 < nParams; col2++) {
-                    JTJ[col][col2] += J_mats[i][row][col] * J_mats[i][row][col2];
+                    JTJ[col][col2] += J_mats[i][row][col] * J_mats[i][row][col2] * w[row];
                 }
             }
         }
@@ -251,8 +254,12 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
 
     // Расчет формальных ошибок
     double residual_sum = 0.0;
-    for (double res : residuals) {
-        residual_sum += res * res;
+    for (int i = 0; i < nObs; i++) {
+        double w_ra = 1.0 / (obs[i].sigma_ra * obs[i].sigma_ra);
+        double w_dec = 1.0 / (obs[i].sigma_dec * obs[i].sigma_dec);
+
+        residual_sum += residuals[2 * i] * residuals[2 * i] * w_ra;
+        residual_sum += residuals[2 * i + 1] * residuals[2 * i + 1] * w_dec;
     }
     double sigma2 = residual_sum / (2 * nObs - nParams);
 
@@ -293,7 +300,8 @@ double computeRMS(const OrbitParams& params,
 
         double dRA = res.dRA;
         double dDec = res.dDec;
-        sum += dRA * dRA + dDec * dDec;
+        sum += dRA * dRA ;
+        sum += dDec * dDec ;
     }
 
     return sqrt(sum / 2 / static_cast<double>(obs.size()));

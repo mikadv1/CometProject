@@ -17,19 +17,23 @@ int main() {
 
     double t0 = 2460800.5, tend = t0 + 350.0, dt = 0.0125;
 
-    //Trajectory traj;
-    //integrate(t0, tend, dt * 10, dt, state0, ng0, traj);
-    //processObservations("C:\\diploma\\data\\obs.csv", "C:\\diploma\\data\\residuals.csv", traj);
-
     std::vector<Observation> obs_vector;
     obs_vector.reserve(8500);
     loadObservations("C:\\diploma\\data\\obs.csv", obs_vector);
 
-    std::array<bool, 9> selected = { 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-    OrbitParams estimated = fitOrbit(init_params, obs_vector, t0, tend, dt, selected, 1.0e-10);
+    Trajectory traj;
+    integrate(t0, tend, dt * 10, dt, state0, ng0, traj);
+    writeResiduals(obs_vector, "C:\\diploma\\data\\residuals.csv", traj);
 
-    //integrate(t0, tend, dt * 10, dt, { estimated.r0, estimated.v0 }, estimated.ng0, traj);
-    //processObservations("C:\\diploma\\data\\obs.csv", "C:\\diploma\\data\\residuals_after.csv", traj);
+    std::array<bool, 9> selected = { 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    OrbitParams estimated = fitOrbit(init_params, obs_vector, t0, tend, dt, selected, 1.0e-12);
+
+    integrate(t0, tend, dt * 10, dt, { estimated.r0, estimated.v0 }, estimated.ng0, traj);
+    writeResiduals(obs_vector, "C:\\diploma\\data\\residuals_after.csv", traj);
+
+    //Trajectory traj;
+    //loadTrajectoryFromCSV("C:\\diploma\\data\\vector_table.csv", traj, t0, tend, dt * 10);
+    //writeResiduals(obs_vector, "C:\\diploma\\data\\residuals_JPL.csv", traj);
    
     cleanupCometModel();
     return 0;

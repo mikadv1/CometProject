@@ -113,7 +113,10 @@ void reduceObservation(
     double jd_tdb = utc2tdb(obs.jd_utc);
     result.jd_tdb = jd_tdb;
 
-    Vector3 r_station_gcrs = stationITRF2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrf);
+    if (obs.type != 'S') {
+        Vector3 r_station_gcrs = stationITRF2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrf);
+    }
+    Vector3 r_station_gcrs = obs.r_station_itrf;
     r_station_gcrs = r_station_gcrs / AU_KM;
 
     StateVector earth_state = getBodyState(EPH_EARTH, jd_tdb);
