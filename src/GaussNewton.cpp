@@ -300,11 +300,52 @@ double computeRMS(const OrbitParams& params,
 
         double dRA = res.dRA;
         double dDec = res.dDec;
-        sum += dRA * dRA ;
-        sum += dDec * dDec ;
+        sum += dRA * dRA;
+        sum += dDec * dDec;
     }
 
-    return sqrt(sum / 2 / static_cast<double>(obs.size()));
+    return sqrt(sum / (static_cast<int>(obs.size()) * 2));
+}
+
+double computeWRMS(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt) {
+    double sum = 0.0, w_sum = 0.0;
+
+    for (const Observation& observation : obs) {
+        ReductionResult res;
+        reduceObservation(observation, traj, res);
+        double w_ra = 1 / observation.sigma_ra;
+        double w_dec = 1 / observation.sigma_dec;
+
+        double dRA = res.dRA;
+        double dDec = res.dDec;
+        sum += dRA * dRA * w_ra;
+        sum += dDec * dDec * w_dec;
+        w_sum += w_ra * w_ra + w_dec * w_dec;
+    }
+
+    return sqrt(sum / w_sum);
+}
+
+double computeS(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt) {
+    double sum = 0.0;
+
+    for (const Observation& observation : obs) {
+        ReductionResult res;
+        reduceObservation(observation, traj, res);
+
+        double dRA = res.dRA / observation.sigma_ra;
+        double dDec = res.dDec / observation.sigma_dec;
+        sum += dRA * dRA;
+        sum += dDec * dDec;
+    }
+
+    return sqrt(sum / (static_cast<int>(obs.size()) * 2));
 }
 
 void printParams(const OrbitParams& p, const ParamVector& errors, int iteration) {
@@ -420,8 +461,8 @@ OrbitParams fitOrbit(
 
     Trajectory traj;
     integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
-    double err = computeRMS(params, obs, traj, internal_dt);
-    printf("Initial RMS: %.16le \n\n", err);
+    double err = computeS(params, obs, traj, internal_dt);
+    printf("Initial S(beta): %.12f\n\n", err);
 
     for (int iter = 0; iter < max_iterations; iter++) {
         OrbitParams prev = params;
@@ -432,12 +473,15 @@ OrbitParams fitOrbit(
 
         integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
         double prev_err = err;
-		err = computeRMS(params, obs, traj, internal_dt);
-		double delta = abs(err - prev_err) / prev_err;
+		err = computeS(params, obs, traj, internal_dt);
+		double delta = (err - prev_err) / prev_err;
 
-        printf("RMS = %.16le , delta_RMS = %.16le\n\n", err, delta);
+        printf("S(beta) = %.12f , delta_S = %.8le\n\n", err, delta);
 
-        if (delta < tolerance) {
+        if (abs(delta) < tolerance) {
+			double rms = computeRMS(params, obs, traj, internal_dt);
+			double chi = err * obs.size() * 2 / (obs.size() * 2 - 9);
+            printf("RMS = %.12f , chi_squared = %.12f\n", rms, chi);
             printf("Converged after %d iterations\n", iter + 1);
             break;
         }

@@ -40,7 +40,7 @@ StateVector cometDerivatives(double t, const StateVector& state, const NGVector&
     double r_dot_p = r_hat * p;
     double coeff = 3.0 * J2_SUN * GM_SUN * R_SUN * R_SUN / (r * r * r * r);
     Vector3 a_obl = (r_hat * (2.5 * r_dot_p * r_dot_p - 0.5) - p * r_dot_p) * coeff;
-    result.v = result.v + a_obl;
+    //result.v = result.v + a_obl;
 
     // 3. Возмущения от планет  
     for (int i = 0; i < NUM_OBJECTS; i++) {

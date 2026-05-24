@@ -19,14 +19,14 @@ int main() {
 
     std::vector<Observation> obs_vector;
     obs_vector.reserve(8500);
-    loadObservations("C:\\diploma\\data\\obs.csv", obs_vector);
+    loadObservations("C:\\diploma\\data\\obs_2.csv", obs_vector);
 
     Trajectory traj;
     integrate(t0, tend, dt * 10, dt, state0, ng0, traj);
     writeResiduals(obs_vector, "C:\\diploma\\data\\residuals.csv", traj);
 
     std::array<bool, 9> selected = { 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-    OrbitParams estimated = fitOrbit(init_params, obs_vector, t0, tend, dt, selected, 1.0e-12);
+    OrbitParams estimated = fitOrbit(init_params, obs_vector, t0, tend, dt, selected, 1.0e-10);
 
     integrate(t0, tend, dt * 10, dt, { estimated.r0, estimated.v0 }, estimated.ng0, traj);
     writeResiduals(obs_vector, "C:\\diploma\\data\\residuals_after.csv", traj);

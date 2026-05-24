@@ -43,12 +43,13 @@ bool writeResiduals(const std::vector<Observation>& obs, const char* outFile, co
         return false;
     } 
 
-    fprintf(fout, "JD,dRA,dDec,Code\n");
+    fprintf(fout, "JD,dRA,dDec,sigmaRA,sigmaDec,Code\n");
     int count = 0;
     for (const Observation& ob : obs) {
         ReductionResult res;
         reduceObservation(ob, traj, res);
-        fprintf(fout, "%.8f,%.4f,%.4f,%s\n", ob.jd_utc, res.dRA, res.dDec, ob.code);
+        //printf("%s %.6f\n", ob.code, res.jd_tdb);
+        fprintf(fout, "%.8f,%.4f,%.4f,%.4f,%.4f,%s\n", ob.jd_utc, res.dRA, res.dDec, ob.sigma_ra, ob.sigma_dec, ob.code);
         count++;
     }
 
@@ -80,7 +81,6 @@ bool loadObservations(const char* obsFile, std::vector<Observation>& obs_vector)
             printf("Error while reading line %d %s\n",count + 2, line);
             continue;
         }
-        if (type == 'S') continue;
 
         Observation observation;
         observation.jd_utc = jd;

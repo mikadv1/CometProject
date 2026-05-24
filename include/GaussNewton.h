@@ -69,6 +69,16 @@ double computeRMS(const OrbitParams& params,
     const Trajectory& traj,
     double internal_dt);
 
+double computeWRMS(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt);
+
+double computeS(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt);
+
 void printParams(const OrbitParams& p, const ParamVector& errors, int iteration);
 
 ParamVector solveCholesky(const Matrix9x9& A, const ParamVector& b,
