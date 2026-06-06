@@ -36,46 +36,23 @@ bool loadTrajectoryFromCSV(const char* filename, Trajectory& traj, double t0, do
     return count > 0;
 }
 
-bool processObservations(const char* obsFile, const char* outFile, const Trajectory& traj) {
-    FILE* fin = fopen(obsFile, "r");
+bool writeResiduals(const std::vector<Observation>& obs, const char* outFile, const Trajectory& traj) {
     FILE* fout = fopen(outFile, "w");
-    if (!fin || !fout) {
-        printf("[ERROR] Cannot open input/output files\n");
-        if (fin) fclose(fin);
-        if (fout) fclose(fout);
+    if (!fout) {
+        printf("[ERROR] Cannot open output files\n");
         return false;
-    }
+    } 
 
-    fprintf(fout, "JD,dRA,dDec,Code\n");
-
-    char line[256];
-    fgets(line, sizeof(line), fin);  
-
+    fprintf(fout, "JD,dRA,dDec,sigmaRA,sigmaDec,Code\n");
     int count = 0;
-
-    while (fgets(line, sizeof(line), fin)) {
-        double jd, ra, dec, x, y, z;
-        int code; char mode;
-
-        if (sscanf(line, "%lf,%lf,%lf,%lf,%lf,%lf,%d,%c",
-            &jd, &ra, &dec, &x, &y, &z, &code, &mode) != 8) {
-            continue;
-        }
-        if (mode == 'S') continue;
-        if (jd < traj.t0 || jd > traj.tend) continue;
-
-        Vector3 r_station(x, y, z);
+    for (const Observation& ob : obs) {
         ReductionResult res;
-        Observation obs = { jd, ra, dec, r_station };
-
-        reduceObservation(obs, traj, res);
-
-        fprintf(fout, "%.8f,%.4f,%.4f,%d\n", jd, res.dRA, res.dDec, code);
-
+        reduceObservation(ob, traj, res);
+        //printf("%s %.6f\n", ob.code, res.jd_tdb);
+        fprintf(fout, "%.8f,%.4f,%.4f,%.4f,%.4f,%s\n", ob.jd_utc, res.dRA, res.dDec, ob.sigma_ra, ob.sigma_dec, ob.code);
         count++;
     }
 
-    fclose(fin);
     fclose(fout);
 
     printf("Processed %d observations\n", count);
@@ -96,19 +73,27 @@ bool loadObservations(const char* obsFile, std::vector<Observation>& obs_vector)
     int count = 0;
 
     while (fgets(line, sizeof(line), fin)) {
-        double jd = 0, ra = 0, dec = 0, x = 0, y = 0, z = 0;
-        int code = 0; char type = '\0';
+        double jd = 0, ra = 0, dec = 0, sigma_ra, sigma_dec, x = 0, y = 0, z = 0;
+        char code[4] = {}; char type = '\0';
 
-        if (sscanf(line, "%lf,%lf,%lf,%lf,%lf,%lf,%d,%c",
-            &jd, &ra, &dec, &x, &y, &z, &code, &type) != 8) {
+        if (sscanf(line, "%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%3[^,],%c",
+            &jd, &ra, &dec, &sigma_ra, &sigma_dec, &x, &y, &z, code, &type) != 10) {
             printf("Error while reading line %d %s\n",count + 2, line);
-            printf("%.6f %.3f %.3f %.3f %.3f %.3f %d %c\n", jd, ra, dec, x, y, z, code, type);
             continue;
         }
-        if (type == 'S') continue;
 
-        Vector3 r_station(x, y, z);
-        obs_vector.push_back({ jd, ra, dec, r_station });
+        Observation observation;
+        observation.jd_utc = jd;
+        observation.ra = ra;
+        observation.dec = dec;
+        observation.sigma_ra = sigma_ra;
+        observation.sigma_dec = sigma_dec;
+        observation.r_station_itrf = Vector3(x, y, z);
+        observation.type = type;
+        strncpy(observation.code, code, 3);
+        observation.code[3] = '\0';  
+
+        obs_vector.push_back(observation);
 
         count++;
     }

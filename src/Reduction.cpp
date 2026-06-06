@@ -111,11 +111,17 @@ void reduceObservation(
     result.jd_utc = obs.jd_utc;
 
     double jd_tdb = utc2tdb(obs.jd_utc);
+	//double jd_tdb = obs.jd_utc;
     result.jd_tdb = jd_tdb;
 
-    Vector3 r_station_gcrs = stationITRF2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrf);
+    Vector3 r_station_gcrs;
+    if (obs.type != 'S') {
+        r_station_gcrs = stationITRF2GCRS(obs.jd_utc, jd_tdb, obs.r_station_itrf);
+    }
+    else {
+        r_station_gcrs = obs.r_station_itrf;
+    }
     r_station_gcrs = r_station_gcrs / AU_KM;
-
     StateVector earth_state = getBodyState(EPH_EARTH, jd_tdb);
 
     Vector3 r_obs = earth_state.r + r_station_gcrs;
@@ -127,7 +133,7 @@ void reduceObservation(
 
     Vector3 rho = comet.r - r_obs;
 
-    rho = Deflection(rho, r_obs);
+    //rho = Deflection(rho, r_obs);
 
     double ra_model, dec_model;
     cartesianToSphericalArcsec(rho, ra_model, dec_model);

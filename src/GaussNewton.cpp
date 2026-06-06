@@ -190,7 +190,8 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     const std::vector<Observation>& obs,
     const Trajectory& traj,
     double internal_dt, 
-    const std::array<bool, 9> selected) {
+    const std::array<bool, 9> selected,
+    ParamVector& errors) {
 
     int nObs = static_cast<int>(obs.size());
     int nParams = 9;
@@ -232,20 +233,41 @@ OrbitParams gaussNewtonStep(const OrbitParams& params,
     }
     printf("\n");
 
-    // Формируем нормальные уравнения: (J^T J) * dP = J^T r
+    // Формируем нормальные уравнения: (J^T W J) * delta_P = J^T W r
     Matrix9x9 JTJ{};
     ParamVector JTr{};
 
     for (int i = 0; i < nObs; i++) {
+        double w[2] = {};
+        w[0] = 1.0 / (obs[i].sigma_ra * obs[i].sigma_ra);
+        w[1] = 1.0 / (obs[i].sigma_dec * obs[i].sigma_dec);
         for (int row = 0; row < 2; row++) {
             int idx = 2 * i + row;
             for (int col = 0; col < nParams; col++) {
-                JTr[col] += J_mats[i][row][col] * residuals[idx];
+                JTr[col] += J_mats[i][row][col] * residuals[idx] * w[row];
                 for (int col2 = 0; col2 < nParams; col2++) {
-                    JTJ[col][col2] += J_mats[i][row][col] * J_mats[i][row][col2];
+                    JTJ[col][col2] += J_mats[i][row][col] * J_mats[i][row][col2] * w[row];
                 }
             }
         }
+    }
+
+    // Расчет формальных ошибок
+    double residual_sum = 0.0;
+    for (int i = 0; i < nObs; i++) {
+        double w_ra = 1.0 / (obs[i].sigma_ra * obs[i].sigma_ra);
+        double w_dec = 1.0 / (obs[i].sigma_dec * obs[i].sigma_dec);
+
+        residual_sum += residuals[2 * i] * residuals[2 * i] * w_ra;
+        residual_sum += residuals[2 * i + 1] * residuals[2 * i + 1] * w_dec;
+    }
+    double sigma2 = residual_sum / (2 * nObs - nParams);
+
+    for (int i = 0; i < nParams; i++) {
+		ParamVector e_i = {};
+        e_i[i] = 1.0;
+        ParamVector var_vec = solveCholesky(JTJ, e_i, {1, 1, 1, 1, 1, 1, 1, 1, 1});
+		errors[i] = sqrt(sigma2 * var_vec[i]);
     }
 
     // Решаем систему
@@ -278,44 +300,70 @@ double computeRMS(const OrbitParams& params,
 
         double dRA = res.dRA;
         double dDec = res.dDec;
-        sum += dRA * dRA + dDec * dDec;
+        sum += dRA * dRA;
+        sum += dDec * dDec;
     }
 
-    return sqrt(sum / 2 / static_cast<double>(obs.size()));
+    return sqrt(sum / (static_cast<int>(obs.size()) * 2));
 }
 
-double params_diff(const OrbitParams& p1, const OrbitParams& p2) {
-    double rel_err[9];
+double computeWRMS(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt) {
+    double sum = 0.0, w_sum = 0.0;
 
-    // Позиция
-    rel_err[0] = (p1.r0.x - p2.r0.x);
-    rel_err[1] = (p1.r0.y - p2.r0.y);
-    rel_err[2] = (p1.r0.z - p2.r0.z);
+    for (const Observation& observation : obs) {
+        ReductionResult res;
+        reduceObservation(observation, traj, res);
+        double w_ra = 1 / observation.sigma_ra;
+        double w_dec = 1 / observation.sigma_dec;
 
-    // Скорость
-    rel_err[3] = (p1.v0.x - p2.v0.x);
-    rel_err[4] = (p1.v0.y - p2.v0.y);
-    rel_err[5] = (p1.v0.z - p2.v0.z);
+        double dRA = res.dRA;
+        double dDec = res.dDec;
+        sum += dRA * dRA * w_ra;
+        sum += dDec * dDec * w_dec;
+        w_sum += w_ra * w_ra + w_dec * w_dec;
+    }
 
-    // Параметры Марсдена
-    rel_err[6] = (p1.ng0.A1 - p2.ng0.A1);
-    rel_err[7] = (p1.ng0.A2 - p2.ng0.A2);
-    rel_err[8] = (p1.ng0.A3 - p2.ng0.A3);
+    return sqrt(sum / w_sum);
+}
 
-    // Норма вектора относительных ошибок
+double computeS(const OrbitParams& params,
+    const std::vector<Observation>& obs,
+    const Trajectory& traj,
+    double internal_dt) {
     double sum = 0.0;
-    for (int i = 0; i < 9; i++) {
-        sum += rel_err[i] * rel_err[i];
+
+    for (const Observation& observation : obs) {
+        ReductionResult res;
+        reduceObservation(observation, traj, res);
+
+        double dRA = res.dRA / observation.sigma_ra;
+        double dDec = res.dDec / observation.sigma_dec;
+        sum += dRA * dRA;
+        sum += dDec * dDec;
     }
 
-    return sqrt(sum);
+    return sqrt(sum / (static_cast<int>(obs.size()) * 2));
 }
 
-void printParams(const OrbitParams& p, int iteration) {
+void printParams(const OrbitParams& p, const ParamVector& errors, int iteration) {
     printf("Iteration %d\n", iteration);
-    printf("r0 = (%.16le, %.16le, %.16le) AU\n", p.r0.x, p.r0.y, p.r0.z);
-    printf("v0 = (%.16le, %.16le, %.16le) AU/day\n", p.v0.x, p.v0.y, p.v0.z);
-    printf("NG = (%.16le, %.16le, %.16le) AU/day^2\n", p.ng0.A1, p.ng0.A2, p.ng0.A3);
+    printf("Position (AU):\n");
+    printf("  r0.x = % .16le +- % .16e\n", p.r0.x, errors[0]);
+    printf("  r0.y = % .16le +- % .16e\n", p.r0.y, errors[1]);
+    printf("  r0.z = % .16le +- % .16e\n", p.r0.z, errors[2]);
+
+    printf("Velocity (AU/day):\n");
+    printf("  v0.x = % .16le +- % .16e\n", p.v0.x, errors[3]);
+    printf("  v0.y = % .16le +- % .16e\n", p.v0.y, errors[4]);
+    printf("  v0.z = % .16le +- % .16e\n", p.v0.z, errors[5]);
+
+    printf("Non-gravitational (AU/day^2):\n");
+    printf("  A1   = % .16le +- % .16e\n", p.ng0.A1, errors[6]);
+    printf("  A2   = % .16le +- % .16e\n", p.ng0.A2, errors[7]);
+    printf("  A3   = % .16le +- % .16e\n", p.ng0.A3, errors[8]);
 }
 
 ParamVector solveCholesky(const Matrix9x9& A, const ParamVector& b, const std::array<bool, 9>& selected) {
@@ -407,29 +455,33 @@ OrbitParams fitOrbit(
     int max_iterations) {
 
     OrbitParams params = init_params;
-
+    ParamVector errors{};
     // Вывод начальных параметров
-    printParams(params, 0);
+    printParams(params, errors, 0);
 
     Trajectory traj;
     integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
-    double initial_err = computeRMS(params, obs, traj, internal_dt);
-    printf("Initial RMS: %.16f \n", initial_err);
+    double err = computeS(params, obs, traj, internal_dt);
+    printf("Initial S(beta): %.12f\n\n", err);
 
     for (int iter = 0; iter < max_iterations; iter++) {
         OrbitParams prev = params;
-        params = gaussNewtonStep(params, obs, traj, internal_dt, selected);
+        params = gaussNewtonStep(params, obs, traj, internal_dt, selected, errors);
 
         // Вывод параметров после итерации
-        printParams(params, iter + 1);
+        printParams(params, errors, iter + 1);
 
         integrate(t0, tend, internal_dt * 10, internal_dt, { params.r0, params.v0 }, params.ng0, traj);
-        double err = computeRMS(params, obs, traj, internal_dt);
-        double delta = params_diff(params, prev);
+        double prev_err = err;
+		err = computeS(params, obs, traj, internal_dt);
+		double delta = (err - prev_err) / prev_err;
 
-        printf("RMS = %.16f , delta = %.e\n", err, delta);
+        printf("S(beta) = %.12f , delta_S = %.8le\n\n", err, delta);
 
-        if (delta < tolerance) {
+        if (abs(delta) < tolerance) {
+			double rms = computeRMS(params, obs, traj, internal_dt);
+			double chi = err * obs.size() * 2 / (obs.size() * 2 - 9);
+            printf("RMS = %.12f , chi_squared = %.12f\n", rms, chi);
             printf("Converged after %d iterations\n", iter + 1);
             break;
         }

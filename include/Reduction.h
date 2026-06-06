@@ -13,8 +13,11 @@ struct Observation {
     double jd_utc;
     double ra;
     double dec;
+    double sigma_ra;
+    double sigma_dec;
     Vector3 r_station_itrf;
     char type;
+    char code[4];
 };
 
 void reduceObservation(

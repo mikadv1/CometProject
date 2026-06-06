@@ -3,22 +3,9 @@
 #include "Constants.h"
 #include <cmath>
 
-// Параметры функции активности для водяного льда
-const double NG_R0 = 2.808;
-const double NG_M = 2.15;
-const double NG_N = 5.093;
-const double NG_K = 4.6142;
-const double NG_ALPHA = 0.1112624;
-
-// Функция активности g(r) для H2O
-//double marsden_g(double r_au) {
-//    double x = r_au / NG_R0;
-//    return NG_ALPHA * pow(x, -NG_M) * pow(1.0 + pow(x, NG_N), -NG_K);
-//}
-
 // Функция активности g(r) для CO2
 double marsden_g(double r_au) {
-    return pow(r_au, -4.5);
+    return pow(r_au, -2.0);
 }
 
 // Вычисление негравитационного ускорения в барицентрической системе
@@ -53,7 +40,7 @@ StateVector cometDerivatives(double t, const StateVector& state, const NGVector&
     double r_dot_p = r_hat * p;
     double coeff = 3.0 * J2_SUN * GM_SUN * R_SUN * R_SUN / (r * r * r * r);
     Vector3 a_obl = (r_hat * (2.5 * r_dot_p * r_dot_p - 0.5) - p * r_dot_p) * coeff;
-    result.v = result.v + a_obl;
+    //result.v = result.v + a_obl;
 
     // 3. Возмущения от планет  
     for (int i = 0; i < NUM_OBJECTS; i++) {

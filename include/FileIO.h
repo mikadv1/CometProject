@@ -8,6 +8,6 @@
 bool loadTrajectoryFromCSV(const char* filename, Trajectory& traj, double t0, double tend, double dt);
 
 // Обработка наблюдений и запись невязок
-bool processObservations(const char* obsFile, const char* outFile, const Trajectory& traj);
+bool writeResiduals(const std::vector<Observation>& obs, const char* outFile, const Trajectory& traj);
 
 bool loadObservations(const char* obsFile, std::vector<Observation>& obs_vector);
